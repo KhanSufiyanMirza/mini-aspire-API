@@ -37,7 +37,15 @@ amount_need_to_pay=$3,
 term=$4,
 approval_status=$5,
 repayment_status=$6,
-last_updated_by=$7
+last_updated_by=$7,
+updated_at=$8
+WHERE id = $1 RETURNING *;
+
+-- name: UpdateLoanStatus :one
+UPDATE loans SET 
+approval_status=$2,
+last_updated_by=$3,
+updated_at=$4
 WHERE id = $1 RETURNING *;
 
 -- name: DeleteLoan :exec

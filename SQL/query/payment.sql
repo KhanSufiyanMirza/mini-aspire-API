@@ -33,7 +33,8 @@ UPDATE payments SET
 loan_id=$2,
 user_id=$3,
 amount=$4,
-last_updated_by=$5
+last_updated_by=$5,
+updated_at=$6
 WHERE id = $1 RETURNING *;
 
 

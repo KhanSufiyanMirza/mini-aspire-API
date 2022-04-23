@@ -7,6 +7,7 @@ package db
 
 import (
 	"context"
+	"time"
 )
 
 const createBorrower = `-- name: CreateBorrower :one
@@ -213,15 +214,17 @@ const updateBorrower = `-- name: UpdateBorrower :one
 UPDATE borrowers SET 
 user_id=$2,
 loan_id=$3,
-last_updated_by=$4
+last_updated_by=$4,
+updated_at=$5
 WHERE id = $1 RETURNING id, user_id, loan_id, is_active, created_by, created_at, last_updated_by, updated_at, ip_from, user_agent
 `
 
 type UpdateBorrowerParams struct {
-	ID            int64  `json:"id"`
-	UserID        int64  `json:"user_id"`
-	LoanID        int64  `json:"loan_id"`
-	LastUpdatedBy string `json:"last_updated_by"`
+	ID            int64     `json:"id"`
+	UserID        int64     `json:"user_id"`
+	LoanID        int64     `json:"loan_id"`
+	LastUpdatedBy string    `json:"last_updated_by"`
+	UpdatedAt     time.Time `json:"updated_at"`
 }
 
 func (q *Queries) UpdateBorrower(ctx context.Context, arg UpdateBorrowerParams) (Borrower, error) {
@@ -230,6 +233,7 @@ func (q *Queries) UpdateBorrower(ctx context.Context, arg UpdateBorrowerParams) 
 		arg.UserID,
 		arg.LoanID,
 		arg.LastUpdatedBy,
+		arg.UpdatedAt,
 	)
 	var i Borrower
 	err := row.Scan(

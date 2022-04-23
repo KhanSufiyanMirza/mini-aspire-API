@@ -245,7 +245,8 @@ mobile=$3,
 email=$4,
 address=$5,
 hashed_password=$6,
-last_updated_by=$4
+last_updated_by=$7,
+updated_at=$8
 WHERE id = $1 RETURNING id, name, mobile, address, email, hashed_password, password_changed_at, is_active, created_by, created_at, last_updated_by, updated_at, ip_from, user_agent
 `
 
@@ -256,6 +257,8 @@ type UpdateUserParams struct {
 	Email          string         `json:"email"`
 	Address        sql.NullString `json:"address"`
 	HashedPassword string         `json:"hashed_password"`
+	LastUpdatedBy  string         `json:"last_updated_by"`
+	UpdatedAt      time.Time      `json:"updated_at"`
 }
 
 func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error) {
@@ -266,6 +269,8 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		arg.Email,
 		arg.Address,
 		arg.HashedPassword,
+		arg.LastUpdatedBy,
+		arg.UpdatedAt,
 	)
 	var i User
 	err := row.Scan(

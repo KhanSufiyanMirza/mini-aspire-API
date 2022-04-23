@@ -7,6 +7,7 @@ package db
 
 import (
 	"context"
+	"time"
 )
 
 const createLoan = `-- name: CreateLoan :one
@@ -209,7 +210,8 @@ amount_need_to_pay=$3,
 term=$4,
 approval_status=$5,
 repayment_status=$6,
-last_updated_by=$7
+last_updated_by=$7,
+updated_at=$8
 WHERE id = $1 RETURNING id, amount, amount_need_to_pay, term, approval_status, is_active, repayment_status, created_by, created_at, last_updated_by, updated_at, ip_from, user_agent
 `
 
@@ -221,6 +223,7 @@ type UpdateLoanParams struct {
 	ApprovalStatus  EnumApprovalStatus `json:"approval_status"`
 	RepaymentStatus EnumPaymentStatus  `json:"repayment_status"`
 	LastUpdatedBy   string             `json:"last_updated_by"`
+	UpdatedAt       time.Time          `json:"updated_at"`
 }
 
 func (q *Queries) UpdateLoan(ctx context.Context, arg UpdateLoanParams) (Loan, error) {
@@ -232,6 +235,48 @@ func (q *Queries) UpdateLoan(ctx context.Context, arg UpdateLoanParams) (Loan, e
 		arg.ApprovalStatus,
 		arg.RepaymentStatus,
 		arg.LastUpdatedBy,
+		arg.UpdatedAt,
+	)
+	var i Loan
+	err := row.Scan(
+		&i.ID,
+		&i.Amount,
+		&i.AmountNeedToPay,
+		&i.Term,
+		&i.ApprovalStatus,
+		&i.IsActive,
+		&i.RepaymentStatus,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.LastUpdatedBy,
+		&i.UpdatedAt,
+		&i.IpFrom,
+		&i.UserAgent,
+	)
+	return i, err
+}
+
+const updateLoanStatus = `-- name: UpdateLoanStatus :one
+UPDATE loans SET 
+approval_status=$2,
+last_updated_by=$3,
+updated_at=$4
+WHERE id = $1 RETURNING id, amount, amount_need_to_pay, term, approval_status, is_active, repayment_status, created_by, created_at, last_updated_by, updated_at, ip_from, user_agent
+`
+
+type UpdateLoanStatusParams struct {
+	ID             int64              `json:"id"`
+	ApprovalStatus EnumApprovalStatus `json:"approval_status"`
+	LastUpdatedBy  string             `json:"last_updated_by"`
+	UpdatedAt      time.Time          `json:"updated_at"`
+}
+
+func (q *Queries) UpdateLoanStatus(ctx context.Context, arg UpdateLoanStatusParams) (Loan, error) {
+	row := q.db.QueryRowContext(ctx, updateLoanStatus,
+		arg.ID,
+		arg.ApprovalStatus,
+		arg.LastUpdatedBy,
+		arg.UpdatedAt,
 	)
 	var i Loan
 	err := row.Scan(

@@ -42,7 +42,8 @@ mobile=$3,
 email=$4,
 address=$5,
 hashed_password=$6,
-last_updated_by=$4
+last_updated_by=$7,
+updated_at=$8
 WHERE id = $1 RETURNING *;
 
 -- name: DeleteUser :exec

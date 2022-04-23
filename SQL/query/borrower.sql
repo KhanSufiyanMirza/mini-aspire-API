@@ -35,7 +35,8 @@ LIMIT $1 OFFSET $2;
 UPDATE borrowers SET 
 user_id=$2,
 loan_id=$3,
-last_updated_by=$4
+last_updated_by=$4,
+updated_at=$5
 WHERE id = $1 RETURNING *;
 
 -- name: DeleteBorrower :exec

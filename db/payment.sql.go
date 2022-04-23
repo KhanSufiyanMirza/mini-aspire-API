@@ -7,6 +7,7 @@ package db
 
 import (
 	"context"
+	"time"
 )
 
 const createPayment = `-- name: CreatePayment :one
@@ -178,16 +179,18 @@ UPDATE payments SET
 loan_id=$2,
 user_id=$3,
 amount=$4,
-last_updated_by=$5
+last_updated_by=$5,
+updated_at=$6
 WHERE id = $1 RETURNING id, loan_id, user_id, amount, created_by, created_at, last_updated_by, updated_at, ip_from, user_agent
 `
 
 type UpdatePaymentParams struct {
-	ID            int64  `json:"id"`
-	LoanID        int64  `json:"loan_id"`
-	UserID        int64  `json:"user_id"`
-	Amount        string `json:"amount"`
-	LastUpdatedBy string `json:"last_updated_by"`
+	ID            int64     `json:"id"`
+	LoanID        int64     `json:"loan_id"`
+	UserID        int64     `json:"user_id"`
+	Amount        string    `json:"amount"`
+	LastUpdatedBy string    `json:"last_updated_by"`
+	UpdatedAt     time.Time `json:"updated_at"`
 }
 
 func (q *Queries) UpdatePayment(ctx context.Context, arg UpdatePaymentParams) (Payment, error) {
@@ -197,6 +200,7 @@ func (q *Queries) UpdatePayment(ctx context.Context, arg UpdatePaymentParams) (P
 		arg.UserID,
 		arg.Amount,
 		arg.LastUpdatedBy,
+		arg.UpdatedAt,
 	)
 	var i Payment
 	err := row.Scan(
