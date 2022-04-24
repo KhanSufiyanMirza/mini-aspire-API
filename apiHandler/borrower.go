@@ -12,6 +12,7 @@ type getBorrowerRequest struct {
 	ID int64 `uri:"id" binding:"required,min=1"`
 }
 
+//getBorrower return the borrower from the data store
 func (server *Server) getBorrower(ctx *gin.Context) {
 	var req getBorrowerRequest
 	if err := ctx.ShouldBindUri(&req); err != nil {
@@ -38,6 +39,7 @@ type listBorrowerRequest struct {
 	PageSize int32 `form:"page_size" binding:"required,min=5,max=10"`
 }
 
+// Returns a list of  Borrowers through pagination
 func (server *Server) listBorrower(ctx *gin.Context) {
 	var req listBorrowerRequest
 	if err := ctx.ShouldBindQuery(&req); err != nil {
@@ -62,6 +64,8 @@ func (server *Server) listBorrower(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, borrower)
 }
+
+// Returns a list of  Borrowers in Desc Order through pagination
 func (server *Server) borrowerDescList(ctx *gin.Context) {
 	var req listBorrowerRequest
 	if err := ctx.ShouldBindQuery(&req); err != nil {

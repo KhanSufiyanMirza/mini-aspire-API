@@ -73,7 +73,8 @@ func newTxnResponse(txn db.TransactionDetail) txnResponse {
 
 }
 
-//swagger:route POST  /payment  createPayment
+//createPayment create Payment  return the payment with audit details  from the data store
+
 func (server *Server) createPayment(ctx *gin.Context) {
 	var req createPaymentRequest
 
@@ -109,6 +110,7 @@ type getPaymentRequest struct {
 	ID int64 `uri:"id" binding:"required,min=1"`
 }
 
+//getPayment return the payment from the data store
 func (server *Server) getPayment(ctx *gin.Context) {
 	var req getPaymentRequest
 	if err := ctx.ShouldBindUri(&req); err != nil {
@@ -135,6 +137,7 @@ type listPaymentRequest struct {
 	PageSize int32 `form:"page_size" binding:"required,min=5,max=10"`
 }
 
+// Returns a list of  Payments through pagination
 func (server *Server) listPayment(ctx *gin.Context) {
 	var req listPaymentRequest
 	if err := ctx.ShouldBindQuery(&req); err != nil {
@@ -156,6 +159,9 @@ func (server *Server) listPayment(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, payments)
 }
+
+// Returns a list of  Payments through pagination in Desc Order
+
 func (server *Server) paymentDescList(ctx *gin.Context) {
 	var req listPaymentRequest
 	if err := ctx.ShouldBindQuery(&req); err != nil {

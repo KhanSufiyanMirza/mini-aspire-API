@@ -48,7 +48,7 @@ func newUserResponse(user db.User) userResponse {
 	}
 }
 
-//swagger:route POST  /users users createUser
+//createUser create User
 func (server *Server) createUser(ctx *gin.Context) {
 	var req createUserRequest
 	if err := ctx.ShouldBindBodyWith(&req, binding.JSON); err != nil {
@@ -93,6 +93,7 @@ type getUserRequest struct {
 	ID int64 `uri:"id" binding:"required,min=1"`
 }
 
+//getUser return the User from the data store
 func (server *Server) getUser(ctx *gin.Context) {
 	var req getUserRequest
 	if err := ctx.ShouldBindUri(&req); err != nil {
@@ -119,6 +120,8 @@ type listUserRequest struct {
 	PageSize int32 `form:"page_size" binding:"required,min=5,max=10"`
 }
 
+// Returns a list of  Users through pagination
+
 func (server *Server) listUsers(ctx *gin.Context) {
 	var req listUserRequest
 	if err := ctx.ShouldBindQuery(&req); err != nil {
@@ -141,6 +144,9 @@ func (server *Server) listUsers(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, accounts)
 }
+
+// Returns a list of  Users through pagination in Desc Order
+
 func (server *Server) usersDescList(ctx *gin.Context) {
 	var req listUserRequest
 	if err := ctx.ShouldBindQuery(&req); err != nil {
@@ -171,6 +177,7 @@ type loginUserResponse struct {
 	User        userResponse `json:"user"`
 }
 
+//loginUser function is user login and return data with  token
 func (server *Server) loginUser(ctx *gin.Context) {
 	var req loginUserRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {

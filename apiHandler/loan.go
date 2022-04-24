@@ -58,7 +58,7 @@ func newLoanResponse(loan db.Loan) loanResponse {
 	}
 }
 
-//swagger:route POST  /loans  createLoan
+//createLoan create loanand  return the loan with audit details  from the data store
 func (server *Server) createLoan(ctx *gin.Context) {
 	var req createLoanRequest
 
@@ -89,6 +89,7 @@ func (server *Server) createLoan(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, newLoanResponse(loan))
 }
 
+//getLoan return the loan from the data store
 func (server *Server) getLoan(ctx *gin.Context) {
 	var req getLoanRequest
 	if err := ctx.ShouldBindUri(&req); err != nil {
@@ -110,6 +111,7 @@ func (server *Server) getLoan(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, newLoanResponse(loan))
 }
 
+// Returns a list of  Loans through pagination
 func (server *Server) listLoan(ctx *gin.Context) {
 	var req listLoanRequest
 	if err := ctx.ShouldBindQuery(&req); err != nil {
@@ -131,6 +133,8 @@ func (server *Server) listLoan(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, loans)
 }
+
+// Returns a list of  Loans through pagination in Desc order
 func (server *Server) loanDescList(ctx *gin.Context) {
 	var req listLoanRequest
 	if err := ctx.ShouldBindQuery(&req); err != nil {
