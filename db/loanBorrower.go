@@ -7,6 +7,13 @@ import (
 	"time"
 )
 
+const LaonIsPaid = "loan is Paid no need to pay again"
+
+type TransactionDetail struct {
+	LoanDetails    Loan
+	CurrentPayment Payment
+}
+
 func (store *Store) CreateLoanWithBorrower(ctx context.Context, arg CreateLoanParams) (Loan, error) {
 	var result Loan
 	err := store.execTx(ctx, func(q *Queries) error {
@@ -15,13 +22,13 @@ func (store *Store) CreateLoanWithBorrower(ctx context.Context, arg CreateLoanPa
 		if err != nil {
 			return err
 		}
-		loan, err := q.CreateLoan(ctx, arg)
+		result, err = q.CreateLoan(ctx, arg)
 		if err != nil {
 			return err
 		}
 		argBorrower := CreateBorrowerParams{
 			UserID:        user.ID,
-			LoanID:        loan.ID,
+			LoanID:        result.ID,
 			CreatedBy:     arg.CreatedBy,
 			LastUpdatedBy: arg.LastUpdatedBy,
 			IpFrom:        arg.IpFrom,
@@ -39,8 +46,9 @@ func (store *Store) CreateLoanWithBorrower(ctx context.Context, arg CreateLoanPa
 
 }
 
-func (store *Store) CreatePaymentTerms(ctx context.Context, arg CreatePaymentParams) (Payment, error) {
-	var result Payment
+func (store *Store) CreatePaymentTerms(ctx context.Context, arg CreatePaymentParams) (TransactionDetail, error) {
+	var result TransactionDetail
+
 	err := store.execTx(ctx, func(q *Queries) error {
 		var err error
 
@@ -48,9 +56,13 @@ func (store *Store) CreatePaymentTerms(ctx context.Context, arg CreatePaymentPar
 		if err != nil {
 			return err
 		}
+
 		if loan.RepaymentStatus == EnumPaymentStatusPaid {
-			return fmt.Errorf("loan is Paid no need to pay again")
+
+			return fmt.Errorf(LaonIsPaid)
+
 		} else {
+
 			pendingAmount, _ := strconv.ParseFloat(loan.AmountNeedToPay, 64)
 			user, err := q.GetUserByEmail(ctx, arg.CreatedBy)
 			if err != nil {
@@ -67,7 +79,7 @@ func (store *Store) CreatePaymentTerms(ctx context.Context, arg CreatePaymentPar
 			//if this the last full and final payment of loan
 			if paymentAmount == pendingAmount {
 
-				_, err := q.CreatePayment(ctx, arg)
+				result.CurrentPayment, err = q.CreatePayment(ctx, arg)
 				if err != nil {
 					return err
 				}
@@ -83,7 +95,7 @@ func (store *Store) CreatePaymentTerms(ctx context.Context, arg CreatePaymentPar
 					LastUpdatedBy:   arg.LastUpdatedBy,
 					UpdatedAt:       time.Now(),
 				}
-				_, err = q.UpdateLoan(ctx, updateArg)
+				result.LoanDetails, err = q.UpdateLoan(ctx, updateArg)
 
 				if err != nil {
 					return err
@@ -91,7 +103,7 @@ func (store *Store) CreatePaymentTerms(ctx context.Context, arg CreatePaymentPar
 
 			} else if paymentAmount >= SingleLoanTermAmount {
 
-				_, err := q.CreatePayment(ctx, arg)
+				result.CurrentPayment, err = q.CreatePayment(ctx, arg)
 				if err != nil {
 					return err
 				}
@@ -107,7 +119,7 @@ func (store *Store) CreatePaymentTerms(ctx context.Context, arg CreatePaymentPar
 					LastUpdatedBy:   arg.LastUpdatedBy,
 					UpdatedAt:       time.Now(),
 				}
-				_, err = q.UpdateLoan(ctx, updateArg)
+				result.LoanDetails, err = q.UpdateLoan(ctx, updateArg)
 
 				return err
 

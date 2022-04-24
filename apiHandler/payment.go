@@ -2,6 +2,7 @@ package apihandler
 
 import (
 	"database/sql"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -12,8 +13,8 @@ import (
 )
 
 type createPaymentRequest struct {
-	Amount string `json:"amount" binding:"required,min=1"`
-	LoanID int64  `json:"loan_id" binding:"min=1" `
+	Amount float64 `json:"amount" binding:"required,gt=0"`
+	LoanID int64   `json:"loan_id" binding:"min=1" `
 }
 type paymentResponse struct {
 	ID            int64     `json:"id"`
@@ -24,6 +25,19 @@ type paymentResponse struct {
 	LastUpdatedBy string    `json:"last_updated_by"`
 	CreatedAt     time.Time `json:"created_at"`
 	LastUpdatedAt time.Time `json:"last_updated_at"`
+}
+type txnResponse struct {
+	ID                int64                `json:"payment_id"`
+	LoanID            int64                `json:"loan_id"`
+	UserID            int64                `json:"user_id"`
+	Amount            string               `json:"payment_amount"`
+	PendingLoanAmount string               `json:"pending_loan_amount"`
+	LoanPaymentStatus db.EnumPaymentStatus `json:"loan_payment_status"`
+	LoanAmount        string               `json:"loan_amount"`
+	CreatedBy         string               `json:"created_by"`
+	LastUpdatedBy     string               `json:"last_updated_by"`
+	CreatedAt         time.Time            `json:"created_at"`
+	LastUpdatedAt     time.Time            `json:"last_updated_at"`
 }
 
 func newPaymentResponse(loan db.Payment) paymentResponse {
@@ -40,8 +54,26 @@ func newPaymentResponse(loan db.Payment) paymentResponse {
 	}
 
 }
+func newTxnResponse(txn db.TransactionDetail) txnResponse {
 
-//swagger:route POST  /loans  createLoan
+	return txnResponse{
+
+		ID:                txn.CurrentPayment.ID,
+		LoanID:            txn.CurrentPayment.LoanID,
+		UserID:            txn.CurrentPayment.UserID,
+		Amount:            txn.CurrentPayment.Amount,
+		PendingLoanAmount: txn.LoanDetails.AmountNeedToPay,
+		LoanPaymentStatus: txn.LoanDetails.RepaymentStatus,
+		LoanAmount:        txn.LoanDetails.Amount,
+		CreatedBy:         txn.CurrentPayment.CreatedBy,
+		LastUpdatedBy:     txn.CurrentPayment.LastUpdatedBy,
+		CreatedAt:         txn.CurrentPayment.CreatedAt,
+		LastUpdatedAt:     txn.CurrentPayment.UpdatedAt,
+	}
+
+}
+
+//swagger:route POST  /payment  createPayment
 func (server *Server) createPayment(ctx *gin.Context) {
 	var req createPaymentRequest
 
@@ -52,7 +84,7 @@ func (server *Server) createPayment(ctx *gin.Context) {
 
 	authPayload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
 	arg := db.CreatePaymentParams{
-		Amount:        req.Amount,
+		Amount:        fmt.Sprint(req.Amount),
 		LoanID:        req.LoanID,
 		CreatedBy:     authPayload.Username,
 		LastUpdatedBy: authPayload.Username,
@@ -60,13 +92,17 @@ func (server *Server) createPayment(ctx *gin.Context) {
 		UserAgent:     ctx.Request.UserAgent(),
 	}
 
-	loan, err := server.store.CreatePaymentTerms(ctx, arg)
+	txn, err := server.store.CreatePaymentTerms(ctx, arg)
 	if err != nil {
+		if err.Error() == db.LaonIsPaid {
+			ctx.JSON(http.StatusBadRequest, errorResponse(err))
+			return
+		}
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, newPaymentResponse(loan))
+	ctx.JSON(http.StatusOK, newTxnResponse(txn))
 }
 
 type getPaymentRequest struct {
@@ -80,7 +116,7 @@ func (server *Server) getPayment(ctx *gin.Context) {
 		return
 	}
 
-	loan, err := server.store.GetPayment(ctx, req.ID)
+	payment, err := server.store.GetPayment(ctx, req.ID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			ctx.JSON(http.StatusNotFound, errorResponse(err))
@@ -91,7 +127,7 @@ func (server *Server) getPayment(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, newPaymentResponse(loan))
+	ctx.JSON(http.StatusOK, newPaymentResponse(payment))
 }
 
 type listPaymentRequest struct {
@@ -106,15 +142,33 @@ func (server *Server) listPayment(ctx *gin.Context) {
 		return
 	}
 
-	// authPayload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
-
 	arg := db.ListPaymentParams{
-		// Owner:  authPayload.Username,
 		Limit:  req.PageSize,
 		Offset: (req.PageID - 1) * req.PageSize,
 	}
 
 	payments, err := server.store.ListPayment(ctx, arg)
+
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, payments)
+}
+func (server *Server) paymentDescList(ctx *gin.Context) {
+	var req listPaymentRequest
+	if err := ctx.ShouldBindQuery(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	arg := db.ListDescPaymentParams{
+		Limit:  req.PageSize,
+		Offset: (req.PageID - 1) * req.PageSize,
+	}
+
+	payments, err := server.store.ListDescPayment(ctx, arg)
 
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))

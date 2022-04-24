@@ -2,6 +2,7 @@ package apihandler
 
 import (
 	"database/sql"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -12,8 +13,8 @@ import (
 )
 
 type createLoanRequest struct {
-	Amount string `json:"amount" binding:"required"`
-	Term   int32  `json:"term" binding:"required,min=1,max=6"`
+	Amount float64 `json:"amount" binding:"required,gt=0"`
+	Term   int32   `json:"term" binding:"required,min=1,max=6"`
 }
 type loanResponse struct {
 	ID              int64                 `json:"id"`
@@ -27,6 +28,17 @@ type loanResponse struct {
 	LastUpdatedBy   string                `json:"last_updated_by"`
 	CreatedAt       time.Time             `json:"created_at"`
 	LastUpdatedAt   time.Time             `json:"last_updated_at"`
+}
+type updateLoanStatusRequest struct {
+	ID             int64                 `json:"id" binding:"required,min=1"`
+	ApprovalStatus db.EnumApprovalStatus `json:"approval_status" binding:"required,min=1,oneof=approved rejected"`
+}
+type getLoanRequest struct {
+	ID int64 `uri:"id" binding:"required,min=1"`
+}
+type listLoanRequest struct {
+	PageID   int32 `form:"page_id" binding:"required,min=1"`
+	PageSize int32 `form:"page_size" binding:"required,min=5,max=10"`
 }
 
 func newLoanResponse(loan db.Loan) loanResponse {
@@ -57,8 +69,8 @@ func (server *Server) createLoan(ctx *gin.Context) {
 
 	authPayload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
 	arg := db.CreateLoanParams{
-		Amount:          req.Amount,
-		AmountNeedToPay: req.Amount,
+		Amount:          fmt.Sprint(req.Amount),
+		AmountNeedToPay: fmt.Sprint(req.Amount),
 		Term:            req.Term,
 		ApprovalStatus:  db.EnumApprovalStatusPending,
 		RepaymentStatus: db.EnumPaymentStatusUnpaid,
@@ -75,10 +87,6 @@ func (server *Server) createLoan(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, newLoanResponse(loan))
-}
-
-type getLoanRequest struct {
-	ID int64 `uri:"id" binding:"required,min=1"`
 }
 
 func (server *Server) getLoan(ctx *gin.Context) {
@@ -102,11 +110,6 @@ func (server *Server) getLoan(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, newLoanResponse(loan))
 }
 
-type listLoanRequest struct {
-	PageID   int32 `form:"page_id" binding:"required,min=1"`
-	PageSize int32 `form:"page_size" binding:"required,min=5,max=10"`
-}
-
 func (server *Server) listLoan(ctx *gin.Context) {
 	var req listLoanRequest
 	if err := ctx.ShouldBindQuery(&req); err != nil {
@@ -114,20 +117,65 @@ func (server *Server) listLoan(ctx *gin.Context) {
 		return
 	}
 
-	// authPayload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
-
 	arg := db.ListLoanParams{
-		// Owner:  authPayload.Username,
 		Limit:  req.PageSize,
 		Offset: (req.PageID - 1) * req.PageSize,
 	}
 
-	accounts, err := server.store.ListLoan(ctx, arg)
+	loans, err := server.store.ListLoan(ctx, arg)
 
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, accounts)
+	ctx.JSON(http.StatusOK, loans)
+}
+func (server *Server) loanDescList(ctx *gin.Context) {
+	var req listLoanRequest
+	if err := ctx.ShouldBindQuery(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	arg := db.ListDescLoanParams{
+		Limit:  req.PageSize,
+		Offset: (req.PageID - 1) * req.PageSize,
+	}
+
+	loans, err := server.store.ListDescLoan(ctx, arg)
+
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, loans)
+}
+
+func (server *Server) updateLoanStatus(ctx *gin.Context) {
+
+	var req updateLoanStatusRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	authPayload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
+
+	arg := db.UpdateLoanStatusParams{
+		ID:             req.ID,
+		ApprovalStatus: req.ApprovalStatus,
+		LastUpdatedBy:  authPayload.Username,
+		UpdatedAt:      time.Now(),
+	}
+
+	loan, err := server.store.UpdateLoanStatus(ctx, arg)
+
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, loan)
 }

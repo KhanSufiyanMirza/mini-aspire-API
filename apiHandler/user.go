@@ -14,12 +14,11 @@ import (
 )
 
 type createUserRequest struct {
-	Name          string `json:"name" binding:"required"`
-	Mobile        string `json:"mobile" binding:"required"`
-	Email         string `json:"email" binding:"email"`
-	Password      string `json:"hashed_password" binding:"required,min=6"`
-	CreatedBy     string `json:"created_by" binding:"required"`
-	LastUpdatedBy string `json:"last_updated_by" binding:"required"`
+	Name     string `json:"name" binding:"required,min=3"`
+	Mobile   string `json:"mobile"`
+	Email    string `json:"email" binding:"email,required"`
+	Password string `json:"password" binding:"required,min=6"`
+	Address  string `json:"address"`
 }
 type userResponse struct {
 	ID                int64          `json:"id"`
@@ -66,11 +65,12 @@ func (server *Server) createUser(ctx *gin.Context) {
 		Name:           req.Name,
 		Mobile:         sql.NullString{String: req.Mobile, Valid: len(strings.TrimSpace(req.Mobile)) > 0},
 		Email:          req.Email,
-		CreatedBy:      req.CreatedBy,
-		LastUpdatedBy:  req.LastUpdatedBy,
+		CreatedBy:      req.Email,
+		LastUpdatedBy:  req.Email,
 		IpFrom:         ctx.Request.RemoteAddr,
 		UserAgent:      ctx.Request.UserAgent(),
 		HashedPassword: hashedPassword,
+		Address:        sql.NullString{String: req.Address, Valid: len(strings.TrimSpace(req.Address)) > 0},
 	}
 
 	user, err := server.store.CreateUser(ctx, arg)
@@ -111,13 +111,6 @@ func (server *Server) getUser(ctx *gin.Context) {
 		return
 	}
 
-	// authPayload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
-	// if account.Owner != authPayload.Username {
-	// 	err := errors.New("account doesn't belong to the authenticated user")
-	// 	ctx.JSON(http.StatusUnauthorized, errorResponse(err))
-	// 	return
-	// }
-
 	ctx.JSON(http.StatusOK, account)
 }
 
@@ -141,6 +134,26 @@ func (server *Server) listUsers(ctx *gin.Context) {
 	}
 
 	accounts, err := server.store.ListUser(ctx, arg)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, accounts)
+}
+func (server *Server) usersDescList(ctx *gin.Context) {
+	var req listUserRequest
+	if err := ctx.ShouldBindQuery(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	arg := db.ListDescUserParams{
+		Limit:  req.PageSize,
+		Offset: (req.PageID - 1) * req.PageSize,
+	}
+
+	accounts, err := server.store.ListDescUser(ctx, arg)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return

@@ -39,14 +39,22 @@ func (server *Server) setupRouter() {
 	authRoutes := router.Group("/").Use(authMiddleware(server.tokenMaker))
 	authRoutes.GET("/users/:id", server.getUser)
 	authRoutes.GET("/users", server.listUsers)
+	authRoutes.GET("/users/latest", server.usersDescList)
 
-	authRoutes.POST("/loan/createLoan", server.createLoan)
-	authRoutes.GET("/loan/:id", server.getLoan)
-	authRoutes.GET("/loan", server.listLoan)
+	authRoutes.POST("/loans/createLoan", server.createLoan)
+	authRoutes.GET("/loans/:id", server.getLoan)
+	authRoutes.GET("/loans", server.listLoan)
+	authRoutes.GET("/loans/latest", server.loanDescList)
+	authRoutes.PUT("/loans/updateApprovalStatus", server.updateLoanStatus)
 
-	authRoutes.POST("/payment", server.createPayment)
-	authRoutes.GET("/payment/:id", server.getPayment)
-	authRoutes.GET("/payment", server.listPayment)
+	authRoutes.POST("/payments", server.createPayment)
+	authRoutes.GET("/payments/:id", server.getPayment)
+	authRoutes.GET("/payments", server.listPayment)
+	authRoutes.GET("/payments/latest", server.paymentDescList)
+
+	authRoutes.GET("/borrowers/:id", server.getBorrower)
+	authRoutes.GET("/borrowers", server.listBorrower)
+	authRoutes.GET("/borrowers/latest", server.borrowerDescList)
 
 	// router.GET("/requests/:id", server.getRequest)
 	// router.GET("/requests", server.listRequest)
