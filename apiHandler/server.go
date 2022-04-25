@@ -40,6 +40,7 @@ func (server *Server) setupRouter() {
 	authRoutes.GET("/users/:id", server.getUser)
 	authRoutes.GET("/users", server.listUsers)
 	authRoutes.GET("/users/latest", server.usersDescList)
+	authRoutes.PUT("/users", server.updateUser)
 
 	authRoutes.POST("/loans/createLoan", server.createLoan)
 	authRoutes.GET("/loans/:id", server.getLoan)

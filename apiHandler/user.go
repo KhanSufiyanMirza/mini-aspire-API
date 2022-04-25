@@ -2,11 +2,13 @@ package apihandler
 
 import (
 	"database/sql"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/KhanSufiyanMirza/mini-aspire-API/db"
+	"github.com/KhanSufiyanMirza/mini-aspire-API/token"
 	"github.com/KhanSufiyanMirza/mini-aspire-API/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
@@ -14,6 +16,14 @@ import (
 )
 
 type createUserRequest struct {
+	Name     string `json:"name" binding:"required,min=3"`
+	Mobile   string `json:"mobile"`
+	Email    string `json:"email" binding:"email,required"`
+	Password string `json:"password" binding:"required,min=6"`
+	Address  string `json:"address"`
+}
+type updateUserRequest struct {
+	ID       int64  `json:"id" binding:"required,min=1"`
 	Name     string `json:"name" binding:"required,min=3"`
 	Mobile   string `json:"mobile"`
 	Email    string `json:"email" binding:"email,required"`
@@ -89,6 +99,56 @@ func (server *Server) createUser(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, newUserResponse(user))
 }
 
+//updateUser update User Details
+func (server *Server) updateUser(ctx *gin.Context) {
+	var req updateUserRequest
+	if err := ctx.ShouldBindBodyWith(&req, binding.JSON); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	authPayload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
+
+	account, err := server.store.GetUserByEmail(ctx, authPayload.Username)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			ctx.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	if account.ID != req.ID {
+		ctx.JSON(http.StatusUnauthorized, errorResponse(fmt.Errorf("you can't update other details")))
+		return
+	}
+
+	hashedPassword, err := utils.HashPassword(req.Password)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	arg := db.UpdateUserParams{
+		ID:             req.ID,
+		Name:           req.Name,
+		Mobile:         sql.NullString{String: req.Mobile, Valid: len(strings.TrimSpace(req.Mobile)) > 0},
+		Email:          req.Email,
+		LastUpdatedBy:  req.Email,
+		HashedPassword: hashedPassword,
+		UpdatedAt:      time.Now(),
+		Address:        sql.NullString{String: req.Address, Valid: len(strings.TrimSpace(req.Address)) > 0},
+	}
+
+	user, err := server.store.UpdateUser(ctx, arg)
+	if err != nil {
+
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, newUserResponse(user))
+}
+
 type getUserRequest struct {
 	ID int64 `uri:"id" binding:"required,min=1"`
 }
@@ -146,7 +206,6 @@ func (server *Server) listUsers(ctx *gin.Context) {
 }
 
 // Returns a list of  Users through pagination in Desc Order
-
 func (server *Server) usersDescList(ctx *gin.Context) {
 	var req listUserRequest
 	if err := ctx.ShouldBindQuery(&req); err != nil {
