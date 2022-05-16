@@ -20,4 +20,17 @@ startDockerDb:
 	docker start postgres14
 stopDockerDb:
 	docker stop postgres14
-.PHONY: pullPostgresImg postgres createdb dropdb migrateUp migrateDown sqlcGenerate runGoTest
+proto:
+	rm -f ma/*.go
+	protoc --proto_path=proto --go_out=ma --go_opt=paths=source_relative \
+	--go-grpc_out=ma --go-grpc_opt=paths=source_relative \
+	proto/*.proto
+evans:
+	evans --host localhost --port 15060 -r repl
+server:
+	go run main.go
+
+mock:
+	 mockgen -package mockdb -destination db/mock/store.go  github.com/KhanSufiyanMirza/mini-aspire-API/db Store
+
+.PHONY: pullPostgresImg postgres createdb dropdb migrateUp migrateDown sqlcGenerate runGoTest proto server mock

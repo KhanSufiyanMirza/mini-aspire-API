@@ -1,0 +1,15 @@
+syntax = "proto3";
+import "google/protobuf/timestamp.proto";
+import "user.proto";
+
+package ma;
+option go_package = "github.com/KhanSufiyanMirza/mini-aspire-API/ma";
+
+message CreatUserRequest {
+  string name = 1;
+  string mobile = 2;
+  string email = 3;
+  string password = 4;
+  string address = 5;
+}
+message CreatUserResponse { User user = 1; }

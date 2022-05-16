@@ -1,0 +1,11 @@
+syntax = "proto3";
+import "rpc_create_user.proto";
+import "rpc_login_user.proto";
+
+package ma;
+option go_package = "github.com/KhanSufiyanMirza/mini-aspire-API/ma";
+
+service MiniAspire {
+  rpc CreateUser(CreatUserRequest) returns (CreatUserResponse) {};
+  rpc LoginUser(LoginUserRequest) returns (LoginUserResponse) {};
+}

@@ -14,7 +14,7 @@ type TransactionDetail struct {
 	CurrentPayment Payment
 }
 
-func (store *Store) CreateLoanWithBorrower(ctx context.Context, arg CreateLoanParams) (Loan, error) {
+func (store *SQLStore) CreateLoanWithBorrower(ctx context.Context, arg CreateLoanParams) (Loan, error) {
 	var result Loan
 	err := store.execTx(ctx, func(q *Queries) error {
 		var err error
@@ -46,7 +46,7 @@ func (store *Store) CreateLoanWithBorrower(ctx context.Context, arg CreateLoanPa
 
 }
 
-func (store *Store) CreatePaymentTerms(ctx context.Context, arg CreatePaymentParams) (TransactionDetail, error) {
+func (store *SQLStore) CreatePaymentTerms(ctx context.Context, arg CreatePaymentParams) (TransactionDetail, error) {
 	var result TransactionDetail
 
 	err := store.execTx(ctx, func(q *Queries) error {

@@ -32,3 +32,6 @@ Packages I have used
 
 - pq:
   postgres support
+
+- To connect Evans:
+  evans --host localhost --port 15060 -r repl
